@@ -72,8 +72,6 @@ exports.startup = function() {
 		// Install the scroller
 		$tw.pageScroller = new $tw.utils.PageScroller();
 		document.addEventListener("tw-scroll",$tw.pageScroller,false);
-		// Install the sprite factory
-		$tw.sprite = new $tw.utils.Sprite();
 		// Install the save action handler
 		$tw.wiki.initSavers();
 		document.addEventListener("tw-save-wiki",function(event) {
@@ -85,7 +83,7 @@ exports.startup = function() {
 		// Install the crypto event handler
 		document.addEventListener("tw-set-password",function(event) {
 			$tw.passwordPrompt.createPrompt({
-				serviceName: "Set new password for this TiddlyWiki",
+				serviceName: "Set a new password for this TiddlyWiki",
 				noUserName: true,
 				submitText: "Set password",
 				callback: function(data) {
@@ -106,7 +104,9 @@ exports.startup = function() {
 			renderTree.execute({tiddlerTitle: title});
 			var styleNode = document.createElement("style");
 			styleNode.type = "text/css";
-			styleNode.appendChild(document.createTextNode(renderTree.render("text/plain")));
+			var text = renderTree.render("text/plain");
+			console.log(text)
+			styleNode.appendChild(document.createTextNode(text));
 			document.getElementsByTagName("head")[0].appendChild(styleNode);
 		});
 		// If we're being viewed on a data: URI then give instructions for how to save

@@ -31,10 +31,10 @@ NavigatorWidget.prototype.generate = function() {
 	this.children = this.renderer.renderTree.createRenderers(this.renderer.renderContext,this.renderer.parseTreeNode.children);
 	this.events = [
 		{name: "tw-navigate", handlerObject: this, handlerMethod: "handleNavigateEvent"},
-		{name: "tw-EditTiddler", handlerObject: this, handlerMethod: "handleEditTiddlerEvent"},
-		{name: "tw-SaveTiddler", handlerObject: this, handlerMethod: "handleSaveTiddlerEvent"},
-		{name: "tw-close", handlerObject: this, handlerMethod: "handleCloseTiddlerEvent"},
-		{name: "tw-NewTiddler", handlerObject: this, handlerMethod: "handleNewTiddlerEvent"}
+		{name: "tw-edit-tiddler", handlerObject: this, handlerMethod: "handleEditTiddlerEvent"},
+		{name: "tw-save-tiddler", handlerObject: this, handlerMethod: "handleSaveTiddlerEvent"},
+		{name: "tw-close-tiddler", handlerObject: this, handlerMethod: "handleCloseTiddlerEvent"},
+		{name: "tw-new-tiddler", handlerObject: this, handlerMethod: "handleNewTiddlerEvent"}
 	];
 };
 
@@ -119,7 +119,7 @@ NavigatorWidget.prototype.handleEditTiddlerEvent = function(event) {
 	for(var t=0; t<this.storyList.length; t++) {
 		if(this.storyList[t] === event.tiddlerTitle) {
 			// Compute the title for the draft
-			var draftTitle = "Draft " + (new Date()) + " of " + event.tiddlerTitle;
+			var draftTitle = this.generateDraftTitle(event.tiddlerTitle);
 			this.storyList[t] = draftTitle;
 			// Get the current value of the tiddler we're editing
 			var tiddler = this.renderer.renderTree.wiki.getTiddler(event.tiddlerTitle);
@@ -139,6 +139,18 @@ NavigatorWidget.prototype.handleEditTiddlerEvent = function(event) {
 	this.saveStoryList();
 	event.stopPropagation();
 	return false;
+};
+
+/*
+Generate a title for the draft of a given tiddler
+*/
+NavigatorWidget.prototype.generateDraftTitle = function(title) {
+	var c = 0;
+	do {
+		var draftTitle = "Draft " + (c ? (c + 1) + " " : "") + "of '" + title + "'";
+		c++;
+	} while(this.renderer.renderTree.wiki.tiddlerExists(draftTitle));
+	return draftTitle;
 };
 
 // Take a tiddler out of edit mode, saving the changes
