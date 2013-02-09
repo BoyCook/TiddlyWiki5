@@ -128,6 +128,14 @@ exports.startup = function() {
 			renderTree.refreshInDom(changes);
 		});
 	} else {
+        //Start any server modules first
+        $tw.modules.forEachModuleOfType("server",function(title,module) {
+            console.log('Found server module [%s]', title);
+            if(module.execute) {
+                module.execute();
+            }
+        });
+
 		// On the server, start a commander with the command line arguments
 		commander = new $tw.Commander(
 			Array.prototype.slice.call(process.argv,2),

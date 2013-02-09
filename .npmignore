@@ -1,0 +1,5 @@
+.idea
+.git
+.npmignore
+*.iml
+*.ipr
