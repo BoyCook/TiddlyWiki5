@@ -12,10 +12,9 @@ if [  ! -d "$TW5_EDITION" ]; then
 fi
 
 echo "Using TW5_EDITION as [$TW5_EDITION]"
-pushd $TW5_EDITION > /dev/null
 
 if [  -z "$TW5_LOC" ]; then
-    TW5_LOC="../../tiddlywiki.js"
+    TW5_LOC="./tiddlywiki.js"
 fi
 
 if [  ! -f "$TW5_LOC" ]; then
@@ -26,15 +25,14 @@ fi
 if [ $# -eq 1 ]
 then
     nohup node $TW5_LOC \
+        $TW5_EDITION \    
         --verbose \
         --server 30080 $:/core/templates/tiddlywiki5.template.html text/plain text/html \
         1> ../../webserver.log &
 else
     node $TW5_LOC \
+        $TW5_EDITION \
         --verbose \
-        --server 30080 $:/core/templates/tiddlywiki5.template.html text/plain text/html \
+        --server 8080 $:/core/templates/tiddlywiki5.template.html text/plain text/html \
         || exit 1
 fi
-
-popd > /dev/null
-
