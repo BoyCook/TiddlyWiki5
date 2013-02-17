@@ -59,6 +59,12 @@ TranscludeWidget.prototype.generate = function() {
 	this.targetTitle = this.renderer.getAttribute("target",this.renderer.getContextTiddlerTitle());
 	this.targetField = this.renderer.getAttribute("field");
 	this.targetIndex = this.renderer.getAttribute("index");
+    var parserType = this.renderer.getAttribute("parserType");
+
+    if ((typeof parserType === 'undefined')) {
+        parserType = "text/vnd.tiddlywiki";
+    }
+
 	// Get the render tree for the template
 	this.templateTitle = undefined;
 	if(this.renderer.parseTreeNode.children && this.renderer.parseTreeNode.children.length > 0) {
@@ -84,10 +90,10 @@ TranscludeWidget.prototype.generate = function() {
 					if(text === undefined) {
 						text = "";
 					}
-					parser = this.renderer.renderTree.wiki.parseText("text/vnd.tiddlywiki",text,{parseAsInline: !this.renderer.parseTreeNode.isBlock});
+                    parser = this.renderer.renderTree.wiki.parseText(parserType,text,{parseAsInline: !this.renderer.parseTreeNode.isBlock});
 				} else if(this.targetIndex) {
 					text = this.renderer.renderTree.wiki.extractTiddlerDataItem(this.targetTitle,this.targetIndex,"");
-					parser = this.renderer.renderTree.wiki.parseText("text/vnd.tiddlywiki",text);
+					parser = this.renderer.renderTree.wiki.parseText(parserType,text);
 				}
 			}
 			templateParseTree = parser ? parser.tree : [];
