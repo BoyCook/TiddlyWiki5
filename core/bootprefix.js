@@ -19,6 +19,10 @@ if(typeof(window) === "undefined") {
 	window.$tw = window.$tw || {browser: {}};
 }
 
+$tw.setTimeout = setTimeout;
+$tw.setInterval = setInterval;
+$tw.clearInterval = clearInterval;
+
 /*
 Information about each module is kept in an object with these members:
 	moduleType: type of module
