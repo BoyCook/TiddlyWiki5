@@ -106,11 +106,25 @@ ElementRenderer.prototype.hasAttribute = function(name) {
 };
 
 ElementRenderer.prototype.getAttribute = function(name,defaultValue) {
-	if($tw.utils.hop(this.attributes,name)) {
-		return this.attributes[name];
-	} else {
-		return defaultValue;
-	}
+    var result = defaultValue;
+    if($tw.utils.hop(this.attributes,name)) {
+        result = this.attributes[name];
+    }
+    //Get value from tiddler JSON using attribute name
+    if (result != undefined && result.indexOf("##") == 0) {
+        var elements = result.substring(2).split(".");
+        var tiddlerTitle = this.getAttribute("tiddler",this.getContextTiddlerTitle());
+        var data = this.renderTree.wiki.getTiddlerData(tiddlerTitle);
+        result = this.walkJSON(elements, data, 0);
+    }
+    return result;
+};
+
+ElementRenderer.prototype.walkJSON = function(elements, item, cnt) {
+    if (cnt >= elements.length) {
+        return item;
+    }
+    return this.walkJSON(elements, item[elements[cnt]], (cnt+1));
 };
 
 ElementRenderer.prototype.render = function(type) {
