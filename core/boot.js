@@ -127,6 +127,18 @@ $tw.utils.isArray = function(value) {
 };
 
 /*
+ Determine if a value is in an array
+ */
+$tw.utils.contains = function(items, value) {
+    for (var cnt=0; cnt<items.length; cnt++) {
+        if (items[cnt] == value) {
+            return true;
+        }
+    }
+    return false;
+};
+
+/*
 Iterate through all the own properties of an object or array. Callback is invoked with (element,title,object)
 */
 $tw.utils.each = function(object,callback) {
