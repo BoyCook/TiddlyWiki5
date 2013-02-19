@@ -314,19 +314,48 @@ exports.getTiddlerData = function(title,defaultData) {
 };
 
 /*
-Extract an indexed field from within a data tiddler
-*/
+ Extract an indexed field from within a data tiddler
+ */
 exports.extractTiddlerDataItem = function(title,index,defaultText) {
-	var data = this.getTiddlerData(title,{}),
-		text;
-	if(data && $tw.utils.hop(data,index)) {
-		text = data[index];
-	}
-	if(typeof text === "string" || typeof text === "number") {
-		return text.toString();
-	} else {
-		return defaultText;
-	}
+    var data = this.getTiddlerData(title,{}),
+        text;
+    if(data) {
+        text = this.walkJSON(this.getJSONElements(index), data, 0);
+    }
+    if(typeof text === "string" || typeof text === "number") {
+        return text.toString();
+    } else {
+        return defaultText;
+    }
+};
+
+/*
+ Turn the index string into an array of elements
+ This could probably be done better with an evil regex :-)
+ */
+exports.getJSONElements = function(index) {
+    var elements = [index];
+    if (index.indexOf("\".\"") > -1) {
+        //Strip opening/trailing "quote marks"
+        index = index.substring(0, index.length-1).substring(1);
+        elements = index.split("\".\"");
+    } else if (index.indexOf(".") > -1) {
+        elements = index.split(".");
+    }
+    return elements;
+};
+
+/*
+ Walk JSON tree to find element
+ */
+exports.walkJSON = function(elements, item, cnt) {
+    if (cnt >= elements.length) {
+        return item;
+    } else if ($tw.utils.hop(item,elements[cnt])) {
+        return this.walkJSON(elements, item[elements[cnt]], (cnt+1));
+    } else {
+        return undefined;
+    }
 };
 
 /*
