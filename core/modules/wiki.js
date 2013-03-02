@@ -152,6 +152,13 @@ exports.deleteTiddler = function(title) {
 	delete this.tiddlers[title];
 	this.clearCache(title);
 	this.touchTiddler(title,true);
+
+    //TODO: Speak to Jeremy - I can see that there is a syncer mechanism but not sure if it gets invoked
+    if($tw.browser) {
+        this.invokeClientSyncers('deleteTiddler', title);
+    } else {
+        this.invokeServerSyncers('deleteTiddler', title);
+    }
 };
 
 exports.tiddlerExists = function(title) {
@@ -169,6 +176,13 @@ exports.addTiddler = function(tiddler) {
 	this.tiddlers[title] = tiddler;
 	this.clearCache(title);
 	this.touchTiddler(title);
+
+    //TODO: Speak to Jeremy - I can see that there is a syncer mechanism but not sure if it gets invoked
+    if($tw.browser) {
+        this.invokeClientSyncers('addTiddler', tiddler);
+    } else {
+        this.invokeServerSyncers('addTiddler', tiddler);
+    }
 };
 
 /*
@@ -626,6 +640,61 @@ exports.initSyncers = function() {
 		}
 	});
 };
+
+/*
+ Initialise server syncers
+ */
+exports.initServerSyncers = function() {
+    this.serverSyncers = {};
+    var self = this;
+    $tw.modules.forEachModuleOfType("server-syncer",function(title,module) {
+        if(module.name && module.syncer) {
+            self.serverSyncers[module.name] = new module.syncer({
+                wiki: self
+            });
+        }
+    });
+};
+
+/*
+ Invoke all the server syncers
+ */
+exports.invokeServerSyncers = function(method /* ,args */) {
+    var args = Array.prototype.slice.call(arguments,1);
+    for(var title in this.serverSyncers) {
+        var syncer = this.serverSyncers[title];
+        syncer[method].apply(syncer,args);
+    }
+};
+
+
+/*
+ Initialise client syncers
+ */
+exports.initClientSyncers = function() {
+    this.clientSyncers = {};
+    var self = this;
+    $tw.modules.forEachModuleOfType("client-syncer",function(title,module) {
+        if(module.name && module.syncer) {
+            self.clientSyncers[module.name] = new module.syncer({
+                wiki: self
+            });
+        }
+    });
+};
+
+/*
+ Invoke all the client syncers
+ */
+exports.invokeClientSyncers = function(method /* ,args */) {
+    var args = Array.prototype.slice.call(arguments,1);
+    for(var title in this.clientSyncers) {
+        var syncer = this.clientSyncers[title];
+        syncer[method].apply(syncer,args);
+    }
+};
+
+//TODO: create generic invokeModules function
 
 /*
 Initialise server connections

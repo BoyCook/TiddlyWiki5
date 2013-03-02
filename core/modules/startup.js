@@ -29,6 +29,11 @@ exports.startup = function() {
 	// Set up the wiki store
 	$tw.wiki.initParsers();
 	$tw.wiki.initSyncers();
+
+    if($tw.browser) {
+        $tw.wiki.initClientSyncers();
+    }
+
 	$tw.wiki.initServerConnections();
 	// Set up the command modules
 	$tw.Commander.initCommands();
