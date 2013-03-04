@@ -164,6 +164,15 @@ exports.operators = {
 			return "for(r=subResults.length-1; r>=0; r--) {if(this.getTiddler(subResults[r]).fields[\"" + $tw.utils.stringify(operator.operand) + "\"] " + op + "== undefined) {subResults.splice(r,1);}}";
 		}
 	},
+    "sort-date": { // Sort selected tiddlers
+        selector: function(operator) {
+            throw "Cannot use sort operator at the start of a filter operation";
+        },
+        filter: function(operator) {
+            var desc = operator.prefix === "!" ? "false" : "true";
+            return "this.sortTiddlers(subResults,\"" + $tw.utils.stringify(operator.operand) + "\"," + desc + ",false,true);";
+        }
+    }, // Case insensitive sort of selected tiddlers
 	"sort": { // Sort selected tiddlers
 		selector: function(operator) {
 			throw "Cannot use sort operator at the start of a filter operation";

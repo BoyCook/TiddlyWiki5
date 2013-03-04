@@ -224,31 +224,43 @@ Sort an array of tiddler titles by a specified field
 	isDescending: true if the sort should be descending
 	isCaseSensitive: true if the sort should consider upper and lower case letters to be different
 */
-exports.sortTiddlers = function(titles,sortField,isDescending,isCaseSensitive) {
-	var self = this;
-	titles.sort(function(a,b) {
-		if(sortField !== "title") {
-			a = self.getTiddler(a).fields[sortField] || "";
-			b = self.getTiddler(b).fields[sortField] || "";
-		}
-		if(!isCaseSensitive) {
-			if(typeof a === "string") {
-				a = a.toLowerCase();
-			}
-			if(typeof b === "string") {
-				b = b.toLowerCase();
-			}
-		}
-		if(a < b) {
-			return isDescending ? +1 : -1;
-		} else {
-			if(a > b) {
-				return isDescending ? -1 : +1;
-			} else {
-				return 0;
-			}
-		}
-	});
+exports.sortTiddlers = function(titles,sortField,isDescending,isCaseSensitive,isDate) {
+    var self = this;
+    titles.sort(function(a,b) {
+        if(sortField !== "title") {
+            //TODO: should just need single function call
+            if (sortField.indexOf('##') == 0) {
+                a = self.getTextReference(sortField, '', a);
+                b = self.getTextReference(sortField, '', b);
+            } else {
+                a = self.getTiddler(a).fields[sortField] || "";
+                b = self.getTiddler(b).fields[sortField] || "";
+            }
+        }
+
+        var doCheck = function(val1, val2) {
+            if(val1 < val2) {
+                return isDescending ? +1 : -1;
+            } else if(a > b) {
+                return isDescending ? -1 : +1;
+            }
+            return 0;
+        };
+
+        if (isDate) {
+            return doCheck(new Date(a), new Date(b));
+        } else {
+            if(!isCaseSensitive) {
+                if(typeof a === "string") {
+                    a = a.toLowerCase();
+                }
+                if(typeof b === "string") {
+                    b = b.toLowerCase();
+                }
+            }
+            return doCheck(a, b);
+        }
+    });
 };
 
 exports.forEachTiddler = function(/* [sortField,[excludeTag,]]callback */) {
