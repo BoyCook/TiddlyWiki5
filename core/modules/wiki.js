@@ -373,6 +373,19 @@ exports.walkJSON = function(elements, item, cnt) {
 };
 
 /*
+ Safely parse JSON
+ */
+exports.parseJSON = function(data) {
+    var json = undefined;
+    try {
+        json = JSON.parse(data);
+    } catch (ex) {
+        console.log('Error parsing JSON [%s]', ex);
+    }
+    return json;
+};
+
+/*
 Set a tiddlers content to a JavaScript object. Currently this is done by setting the tiddler's type to "application/json" and setting the text to the JSON text of the data.
 */
 exports.setTiddlerData = function(title,data) {
