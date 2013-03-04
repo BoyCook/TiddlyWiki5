@@ -241,7 +241,7 @@ exports.sortTiddlers = function(titles,sortField,isDescending,isCaseSensitive,is
         var doCheck = function(val1, val2) {
             if(val1 < val2) {
                 return isDescending ? +1 : -1;
-            } else if(a > b) {
+            } else if(val1 > val2) {
                 return isDescending ? -1 : +1;
             }
             return 0;
