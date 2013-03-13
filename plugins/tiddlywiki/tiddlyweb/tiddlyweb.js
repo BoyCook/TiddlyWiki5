@@ -3,7 +3,53 @@ title: $:/plugins/tiddlywiki/tiddlyweb/tiddlyweb.js
 type: application/javascript
 module-type: syncer
 
-Main TiddlyWeb syncer module
+Syncer module for TiddlyWeb-compatible web servers. It is used for working with TiddlyWeb, TiddlySpace and with TiddlyWiki5's built in web server.
+
+The subset of TiddlyWeb features that are required are described below.
+
+! TiddlyWeb format JSON tiddlers
+
+TiddlyWeb uses JSON to represent tiddlers as a hashmap object with the wrinkle that fields other than the standard ones are stored in a special `fields` object. For example:
+
+```
+{
+	creator: "jermolene",
+	fields: {
+		_hash: "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+		customField: "Some custom value"
+	},
+	created: "20130309145404",
+	recipe: "spacename_private",
+	modified: "20130309145414",
+	text: "",
+	title: "Testing times",
+	modifier: "jermolene",
+	type: null,
+	tags: [],
+	revision: 1139558
+}
+```
+
+The revision field is treated as an opaque string by TiddlyWiki5, and only tested for equality. If it is passed as a number it is converted to a string before use.
+
+! Get Status
+
+`GET <protocol>//<host>/status` returns a JSON object that has the following fields:
+
+* `username`, a string containing the username of the currently logged-in user, or the special value `GUEST` for non-authenticated users
+* optionally, `space`, an object, may be present containing a field `recipe` that contains the name o the recipe that generated this wiki
+
+! Get Skinny Tiddlers
+
+`GET <protocol>//<host>/tiddlers.json` or, if a recipe was specified in the results of the status request, `GET <protocol>//<host>/recipes/<recipe>/tiddlers.json`, returns a JSON array of skinny tiddler objects in TiddlyWeb format. "Skinny" means that the tiddlers lack a `text` field.
+
+! Get Tiddler
+
+`GET <protocol>//<host>/tiddlers/<title>` or, if a recipe was specified in the results of the status request, `GET <protocol>//<host>/recipes/<recipe>/tiddlers/<title>`, returns a tiddler in TiddlyWeb format.
+
+! Put Tiddler
+
+`PUT <protocol>//<host>/tiddlers/<title>` or, if a recipe was specified in the results of the status request, `PUT <protocol>//<host>/recipes/<recipe>/tiddlers/<title>`, saves a tiddler in TiddlyWeb format.
 
 \*/
 (function(){
@@ -17,12 +63,40 @@ Creates a TiddlyWebSyncer object
 */
 var TiddlyWebSyncer = function(options) {
 	this.wiki = options.wiki;
-	this.connection = undefined;
-	this.tiddlerInfo = {}; // Hashmap of {revision:,changeCount:}
-	// Tasks are {type: "load"/"save", title:, queueTime:, lastModificationTime:}
+	// Hashmap of {revision:,bag:,changeCount:}
+	this.tiddlerInfo = {};
+	var self = this;
+	// Record information for known tiddlers
+	this.wiki.forEachTiddler(function(title,tiddler) {
+		if(tiddler.fields["revision"]) {
+			self.tiddlerInfo[title] = {
+				revision: tiddler.fields["revision"],
+				bag: tiddler.fields["bag"],
+				changeCount: self.wiki.getChangeCount(title)
+			}
+		}
+	});
+	// Tasks are {type: "load"/"save"/"delete", title:, queueTime:, lastModificationTime:}
 	this.taskQueue = {}; // Hashmap of tasks to be performed
 	this.taskInProgress = {}; // Hash of tasks in progress
 	this.taskTimerId = null; // Sync timer
+	// Compute the host and recipe
+	this.host = document.location.protocol + "//" + document.location.host + "/";
+	this.recipe = undefined; // Filled in by getStatus() to be either "" or "recipes/<recipename>/"
+	// Mark us as not logged in
+	this.wiki.addTiddler({title: TiddlyWebSyncer.titleIsLoggedIn,text: "no"});
+	// Listen out for changes to tiddlers
+	this.wiki.addEventListener("",function(changes) {
+		self.syncToServer(changes);
+	});
+	this.log("Initialising with host:",this.host);
+	// Get the login status
+	this.getStatus(function (err,isLoggedIn,json) {
+		if(isLoggedIn) {
+			// Do a sync
+			self.syncFromServer();
+		}
+	});
 };
 
 TiddlyWebSyncer.titleIsLoggedIn = "$:/plugins/tiddlyweb/IsLoggedIn";
@@ -49,53 +123,10 @@ TiddlyWebSyncer.prototype.log = function(/* arguments */) {
 	$tw.utils.log.apply(null,args);
 };
 
-TiddlyWebSyncer.prototype.addConnection = function(connection) {
-	var self = this;
-	// Check if we've already got a connection
-	if(this.connection) {
-		return new Error("TiddlyWebSyncer can only handle a single connection");
-	}
-	// If we don't have a host then substitute the host of the page
-	if(!connection.host) {
-		connection.host = document.location.protocol + "//" + document.location.host + "/";
-	}
-	// Mark us as not logged in
-	this.wiki.addTiddler({title: TiddlyWebSyncer.titleIsLoggedIn,text: "no"});
-	// Save the connection object
-	this.connection = connection;
-	// Listen out for changes to tiddlers
-	this.wiki.addEventListener("",function(changes) {
-		self.syncToServer(changes);
-	});
-	this.log("Adding connection with recipe:",connection.recipe,"host:",connection.host);
-	// Get the login status
-	this.getStatus(function (err,isLoggedIn,json) {
-		if(isLoggedIn) {
-			// Do a sync
-			self.syncFromServer();
-		}
-	});
-	return ""; // We only support a single connection
-};
-
-/*
-Handle syncer messages
-*/
-TiddlyWebSyncer.prototype.handleEvent = function(event) {
-	switch(event.type) {
-		case "tw-login":
-			this.promptLogin();
-			break;
-		case "tw-logout":
-			this.logout();
-			break;
-	}
-};
-
 /*
 Lazily load a skinny tiddler if we can
 */
-TiddlyWebSyncer.prototype.lazyLoad = function(connection,title,tiddler) {
+TiddlyWebSyncer.prototype.lazyLoad = function(title,tiddler) {
 	// Queue up a sync task to load this tiddler
 	this.enqueueSyncTask({
 		type: "load",
@@ -111,7 +142,7 @@ TiddlyWebSyncer.prototype.getStatus = function(callback) {
 	var self = this;
 	this.log("Getting status");
 	this.httpRequest({
-		url: this.connection.host + "status",
+		url: this.host + "status",
 		callback: function(err,data) {
 			if(err) {
 				return callback(err);
@@ -124,9 +155,9 @@ TiddlyWebSyncer.prototype.getStatus = function(callback) {
 			} catch (e) {
 			}
 			if(json) {
-				// Use the recipe if we don't already have one
-				if(!self.connection.recipe) {
-					self.connection.recipe = json.space.recipe;
+				// Record the recipe
+				if(json.space) {
+					self.recipe = json.space.recipe;
 				}
 				// Check if we're logged in
 				isLoggedIn = json.username !== "GUEST";
@@ -149,7 +180,7 @@ TiddlyWebSyncer.prototype.getStatus = function(callback) {
 /*
 Dispay a password prompt and allow the user to login
 */
-TiddlyWebSyncer.prototype.promptLogin = function() {
+TiddlyWebSyncer.prototype.handleLoginEvent = function() {
 	var self = this;
 	this.getStatus(function(isLoggedIn,json) {
 		if(!isLoggedIn) {
@@ -176,7 +207,7 @@ TiddlyWebSyncer.prototype.login = function(username,password,callback) {
 	this.log("Attempting to login as",username);
 	var self = this,
 		httpRequest = this.httpRequest({
-			url: this.connection.host + "challenge/tiddlywebplugins.tiddlyspace.cookie_form",
+			url: this.host + "challenge/tiddlywebplugins.tiddlyspace.cookie_form",
 			type: "POST",
 			data: {
 				user: username,
@@ -203,12 +234,12 @@ TiddlyWebSyncer.prototype.login = function(username,password,callback) {
 /*
 Attempt to log out of TiddlyWeb
 */
-TiddlyWebSyncer.prototype.logout = function(options) {
+TiddlyWebSyncer.prototype.handleLogoutEvent = function(options) {
 	options = options || {};
 	this.log("Attempting to logout");
 	var self = this,
 		httpRequest = this.httpRequest({
-		url: this.connection.host + "logout",
+		url: this.host + "logout",
 		type: "POST",
 		data: {
 			csrf_token: this.getCsrfToken(),
@@ -232,7 +263,7 @@ TiddlyWebSyncer.prototype.syncFromServer = function() {
 	this.log("Retrieving skinny tiddler list");
 	var self = this;
 	this.httpRequest({
-		url: this.connection.host + "recipes/" + this.connection.recipe + "/tiddlers.json",
+		url: this.host + "recipes/" + this.recipe + "/tiddlers.json",
 		callback: function(err,data) {
 			// Check for errors
 			if(err) {
@@ -259,7 +290,7 @@ TiddlyWebSyncer.prototype.syncFromServer = function() {
 						});
 					} else {
 						// Load the skinny version of the tiddler
-						self.storeTiddler(tiddlerFields,incomingRevision);
+						self.storeTiddler(tiddlerFields);
 					}
 				}
 			}
@@ -277,10 +308,10 @@ Synchronise a set of changes to the server
 TiddlyWebSyncer.prototype.syncToServer = function(changes) {
 	var self = this,
 		now = new Date();
-	$tw.utils.each(changes,function(element,title,object) {
+	$tw.utils.each(changes,function(change,title,object) {
 		// Queue a task to sync this tiddler
 		self.enqueueSyncTask({
-			type: "save",
+			type: change.deleted ? "delete" : "save",
 			title: title
 		});
 	});
@@ -295,9 +326,13 @@ TiddlyWebSyncer.prototype.enqueueSyncTask = function(task) {
 	// Set the timestamps on this task
 	task.queueTime = now;
 	task.lastModificationTime = now;
-	// Bail if it's not a tiddler we know about
+	// Fill in some tiddlerInfo if the tiddler is one we haven't seen before
 	if(!$tw.utils.hop(this.tiddlerInfo,task.title)) {
-		return;
+		this.tiddlerInfo[task.title] = {
+			revision: "0",
+			bag: "bag-not-set",
+			changeCount: -1
+		}
 	}
 	// Bail if this is a save and the tiddler is already at the changeCount that the server has
 	if(task.type === "save" && this.wiki.getChangeCount(task.title) <= this.tiddlerInfo[task.title].changeCount) {
@@ -416,7 +451,7 @@ TiddlyWebSyncer.prototype.dispatchTask = function(task,callback) {
 		var changeCount = this.wiki.getChangeCount(task.title);
 		this.log("Dispatching 'save' task:",task.title);
 		this.httpRequest({
-			url: this.connection.host + "recipes/" + this.connection.recipe + "/tiddlers/" + task.title,
+			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + "/tiddlers/" + encodeURIComponent(task.title),
 			type: "PUT",
 			headers: {
 				"Content-type": "application/json"
@@ -427,9 +462,11 @@ TiddlyWebSyncer.prototype.dispatchTask = function(task,callback) {
 					return callback(err);
 				}
 				// Save the details of the new revision of the tiddler
-				var tiddlerInfo = self.tiddlerInfo[task.title];
+				var etagInfo = self.parseEtag(request.getResponseHeader("Etag")),
+					tiddlerInfo = self.tiddlerInfo[task.title];
 				tiddlerInfo.changeCount = changeCount;
-				tiddlerInfo.revision = self.getRevisionFromEtag(request);
+				tiddlerInfo.bag = etagInfo.bag;
+				tiddlerInfo.revision = etagInfo.revision;
 				// Invoke the callback
 				callback(null);	
 			}
@@ -438,13 +475,28 @@ TiddlyWebSyncer.prototype.dispatchTask = function(task,callback) {
 		// Load the tiddler
 		this.log("Dispatching 'load' task:",task.title);
 		this.httpRequest({
-			url: this.connection.host + "recipes/" + this.connection.recipe + "/tiddlers/" + task.title,
+			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + "/tiddlers/" + encodeURIComponent(task.title),
 			callback: function(err,data,request) {
 				if(err) {
 					return callback(err);
 				}
 				// Store the tiddler and revision number
-				self.storeTiddler(JSON.parse(data),self.getRevisionFromEtag(request));
+				self.storeTiddler(JSON.parse(data));
+				// Invoke the callback
+				callback(null);
+			}
+		});
+	} else if(task.type === "delete") {
+		// Delete the tiddler
+		this.log("Dispatching 'delete' task:",task.title);
+		var bag = this.tiddlerInfo[task.title].bag;
+		this.httpRequest({
+			url: this.host + "bags/" + encodeURIComponent(bag) + "/tiddlers/" + encodeURIComponent(task.title),
+			type: "DELETE",
+			callback: function(err,data,request) {
+				if(err) {
+					return callback(err);
+				}
 				// Invoke the callback
 				callback(null);
 			}
@@ -455,7 +507,7 @@ TiddlyWebSyncer.prototype.dispatchTask = function(task,callback) {
 /*
 Convert a TiddlyWeb JSON tiddler into a TiddlyWiki5 tiddler and save it in the store. Returns true if the tiddler was actually stored
 */
-TiddlyWebSyncer.prototype.storeTiddler = function(tiddlerFields,revision) {
+TiddlyWebSyncer.prototype.storeTiddler = function(tiddlerFields) {
 	var self = this,
 		result = {};
 	// Transfer the fields, pulling down the `fields` hashmap
@@ -478,7 +530,8 @@ TiddlyWebSyncer.prototype.storeTiddler = function(tiddlerFields,revision) {
 	self.wiki.addTiddler(new $tw.Tiddler(self.wiki.getTiddler(result.title),result));
 	// Save the tiddler revision and changeCount details
 	self.tiddlerInfo[result.title] = {
-		revision: revision,
+		revision: tiddlerFields.revision,
+		bag: tiddlerFields.bag,
 		changeCount: self.wiki.getChangeCount(result.title)
 	};
 };
@@ -516,14 +569,32 @@ TiddlyWebSyncer.prototype.convertTiddlerToTiddlyWebFormat = function(title) {
 };
 
 /*
-Extract the revision from the Etag header of a request
+Split a TiddlyWeb Etag into its constituent parts. For example:
+
+```
+"system-images_public/unsyncedIcon/946151:9f11c278ccde3a3149f339f4a1db80dd4369fc04"
+```
+
+Note that the value includes the opening and closing double quotes.
+
+The parts are:
+
+```
+<bag>/<title>/<revision>:<hash>
+```
 */
-TiddlyWebSyncer.prototype.getRevisionFromEtag = function(request) {
-	var etag = request.getResponseHeader("Etag");
-	if(etag) {
-		return etag.split("/")[2].split(":")[0]; // etags are like "system-images_public/unsyncedIcon/946151:9f11c278ccde3a3149f339f4a1db80dd4369fc04"
+TiddlyWebSyncer.prototype.parseEtag = function(etag) {
+	var firstSlash = etag.indexOf("/"),
+		lastSlash = etag.lastIndexOf("/"),
+		colon = etag.lastIndexOf(":");
+	if(firstSlash === -1 || lastSlash === -1 || colon === -1) {
+		return null;
 	} else {
-		return 0;
+		return {
+			bag: decodeURIComponent(etag.substring(1,firstSlash)),
+			title: decodeURIComponent(etag.substring(firstSlash + 1,lastSlash)),
+			revision: etag.substring(lastSlash + 1,colon)
+		}
 	}
 };
 
@@ -554,7 +625,7 @@ TiddlyWebSyncer.prototype.httpRequest = function(options) {
 	// Set up the state change handler
 	request.onreadystatechange = function() {
 		if(this.readyState === 4) {
-			if(this.status === 200) {
+			if(this.status === 200 || this.status === 204) {
 				// Success!
 				options.callback(null,this.responseText,this);
 				return;

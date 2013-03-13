@@ -3,7 +3,7 @@
 # serve TiddlyWiki5 over HTTP
 
 if [  -z "$TW5_EDITION" ]; then
-    TW5_EDITION=editions/tw5.com
+    TW5_EDITION=editions/clientserver
 fi
 
 if [  ! -d "$TW5_EDITION" ]; then

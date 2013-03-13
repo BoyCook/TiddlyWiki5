@@ -16,7 +16,6 @@ last dispatched. Each entry is a hashmap containing two fields:
 	incremented each time a tiddler is created changed or deleted
 * `caches` is a hashmap by tiddler title containing a further hashmap of named cache objects. Caches
 	are automatically cleared when a tiddler is modified or deleted
-* `macros` is a hashmap by macro name containing an object class inheriting from the Macro tree node
 
 \*/
 (function(){
@@ -110,7 +109,7 @@ This method should be called after the changes it describes have been made to th
 	isDeleted: defaults to false (meaning the tiddler has been created or modified),
 		true if the tiddler has been created
 */
-exports.touchTiddler = function(title,isDeleted) {
+exports.enqueueTiddlerEvent = function(title,isDeleted) {
 	// Record the touch in the list of changed tiddlers
 	this.changedTiddlers = this.changedTiddlers || {};
 	this.changedTiddlers[title] = this.changedTiddlers[title] || [];
@@ -151,7 +150,7 @@ exports.getChangeCount = function(title) {
 exports.deleteTiddler = function(title) {
 	delete this.tiddlers[title];
 	this.clearCache(title);
-	this.touchTiddler(title,true);
+	this.enqueueTiddlerEvent(title,true);
 
     //TODO: Speak to Jeremy - I can see that there is a syncer mechanism but not sure if it gets invoked
     if($tw.browser) {
@@ -175,7 +174,7 @@ exports.addTiddler = function(tiddler) {
 	// Save the tiddler
 	this.tiddlers[title] = tiddler;
 	this.clearCache(title);
-	this.touchTiddler(title);
+	this.enqueueTiddlerEvent(title);
 
     //TODO: Speak to Jeremy - I can see that there is a syncer mechanism but not sure if it gets invoked
     if($tw.browser) {
@@ -722,48 +721,15 @@ exports.invokeClientSyncers = function(method /* ,args */) {
 //TODO: create generic invokeModules function
 
 /*
-Initialise server connections
+Invoke all the active syncers
 */
-exports.initServerConnections = function() {
-	this.serverConnections = {};
-	var self = this;
-	$tw.modules.forEachModuleOfType("serverconnection",function(title,module) {
-		// Get the associated syncer
-		if(module.syncer) {
-			var syncer = self.syncers[module.syncer];
-			if(syncer) {
-				// Add the connection and save information about it
-				var connection = syncer.addConnection(module);
-				if(connection instanceof Error) {
-					console.log("Error adding connection: " + connection);
-				} else {
-					self.serverConnections[title] = {
-						syncer: syncer,
-						connection: connection
-					};
-				}
-			}
-		}
-	});
-};
-
-/*
-Invoke all the active server connections
-*/
-exports.invokeServerConnections = function(method /* ,args */) {
+exports.invokeSyncers = function(method /* ,args */) {
 	var args = Array.prototype.slice.call(arguments,1);
-	for(var title in this.serverConnections) {
-		var connection = this.serverConnections[title];
-		connection.syncer[method].apply(connection.syncer,[connection.connection].concat(args));
-	}
-};
-
-/*
-Handle a syncer message
-*/
-exports.handleSyncerEvent = function(event) {
-	for(var syncer in this.syncers) {
-		this.syncers[syncer].handleEvent(event);
+	for(var name in this.syncers) {
+		var syncer = this.syncers[name];
+		if(syncer[method]) {
+			syncer[method].apply(syncer,args);
+		}
 	}
 };
 
@@ -780,8 +746,8 @@ exports.getTiddlerText = function(title,defaultText) {
 		// Just return the text if we've got it
 		return tiddler.fields.text;
 	} else {
-		// Ask all the server connections to load the tiddler if they can
-		this.invokeServerConnections("lazyLoad",title,tiddler);
+		// Ask all the syncers to load the tiddler if they can
+		this.invokeSyncers("lazyLoad",title,tiddler);
 		// Indicate that the text is being loaded
 		return null;
 	}

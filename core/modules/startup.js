@@ -29,12 +29,9 @@ exports.startup = function() {
 	// Set up the wiki store
 	$tw.wiki.initParsers();
 	$tw.wiki.initSyncers();
-
     if($tw.browser) {
         $tw.wiki.initClientSyncers();
     }
-
-	$tw.wiki.initServerConnections();
 	// Set up the command modules
 	$tw.Commander.initCommands();
 	// Get the default tiddlers
@@ -69,11 +66,12 @@ exports.startup = function() {
 			$tw.modal.display(event.param);
 		},false);
 		// Install the syncer message mechanism
-		var handleSyncerEvent = function(event) {
-			$tw.wiki.handleSyncerEvent.call($tw.wiki,event);
-		};
-		document.addEventListener("tw-login",handleSyncerEvent,false);
-		document.addEventListener("tw-logout",handleSyncerEvent,false);
+		document.addEventListener("tw-login",function(event) {
+			$tw.wiki.invokeSyncers("handleLoginEvent",event);
+		},false);
+		document.addEventListener("tw-logout",function(event) {
+			$tw.wiki.invokeSyncers("handleLogoutEvent",event);
+		},false);
 		// Install the scroller
 		$tw.pageScroller = new $tw.utils.PageScroller();
 		document.addEventListener("tw-scroll",$tw.pageScroller,false);
@@ -85,7 +83,7 @@ exports.startup = function() {
 				downloadType: "text/plain"
 			});
 		},false);
-		// Install the crypto event handler
+		// Install the crypto event handlers
 		document.addEventListener("tw-set-password",function(event) {
 			$tw.passwordPrompt.createPrompt({
 				serviceName: "Set a new password for this TiddlyWiki",
