@@ -600,58 +600,58 @@ exports.renderTiddler = function(outputType,title) {
 	return renderTree.render(outputType);
 };
 
-    /*
-     Initialise server syncers
-     */
-    exports.initServerSyncers = function() {
-        this.serverSyncers = {};
-        var self = this;
-        $tw.modules.forEachModuleOfType("server-syncer",function(title,module) {
-            if(module.name && module.syncer) {
-                self.serverSyncers[module.name] = new module.syncer({
-                    wiki: self
-                });
-            }
-        });
-    };
-
-    /*
-     Invoke all the server syncers
-     */
-    exports.invokeServerSyncers = function(method /* ,args */) {
-        var args = Array.prototype.slice.call(arguments,1);
-        for(var title in this.serverSyncers) {
-            var syncer = this.serverSyncers[title];
-            syncer[method].apply(syncer,args);
+/*
+ Initialise server syncers
+ */
+exports.initServerSyncers = function() {
+    this.serverSyncers = {};
+    var self = this;
+    $tw.modules.forEachModuleOfType("server-syncer",function(title,module) {
+        if(module.name && module.syncer) {
+            self.serverSyncers[module.name] = new module.syncer({
+                wiki: self
+            });
         }
-    };
+    });
+};
+
+/*
+ Invoke all the server syncers
+ */
+exports.invokeServerSyncers = function(method /* ,args */) {
+    var args = Array.prototype.slice.call(arguments,1);
+    for(var title in this.serverSyncers) {
+        var syncer = this.serverSyncers[title];
+        syncer[method].apply(syncer,args);
+    }
+};
 
 
-    /*
-     Initialise client syncers
-     */
-    exports.initClientSyncers = function() {
-        this.clientSyncers = {};
-        var self = this;
-        $tw.modules.forEachModuleOfType("client-syncer",function(title,module) {
-            if(module.name && module.syncer) {
-                self.clientSyncers[module.name] = new module.syncer({
-                    wiki: self
-                });
-            }
-        });
-    };
-
-    /*
-     Invoke all the client syncers
-     */
-    exports.invokeClientSyncers = function(method /* ,args */) {
-        var args = Array.prototype.slice.call(arguments,1);
-        for(var title in this.clientSyncers) {
-            var syncer = this.clientSyncers[title];
-            syncer[method].apply(syncer,args);
+/*
+ Initialise client syncers
+ */
+exports.initClientSyncers = function() {
+    this.clientSyncers = {};
+    var self = this;
+    $tw.modules.forEachModuleOfType("client-syncer",function(title,module) {
+        if(module.name && module.syncer) {
+            self.clientSyncers[module.name] = new module.syncer({
+                wiki: self
+            });
         }
-    };    
+    });
+};
+
+/*
+ Invoke all the client syncers
+ */
+exports.invokeClientSyncers = function(method /* ,args */) {
+    var args = Array.prototype.slice.call(arguments,1);
+    for(var title in this.clientSyncers) {
+        var syncer = this.clientSyncers[title];
+        syncer[method].apply(syncer,args);
+    }
+};
     
 /*
 Select the appropriate saver modules and set them up

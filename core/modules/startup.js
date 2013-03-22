@@ -20,13 +20,15 @@ exports.startup = function() {
 	$tw.modules.applyMethods("utils",$tw.utils);
 	if($tw.browser) {
 		$tw.utils.getBrowserInfo($tw.browser);
-        $tw.wiki.initClientSyncers();
 	}
 	$tw.version = $tw.utils.extractVersionInfo();
 	$tw.Tiddler.fieldModules = $tw.modules.getModulesByTypeAsHashmap("tiddlerfield");
 	$tw.modules.applyMethods("tiddlermethod",$tw.Tiddler.prototype);
 	$tw.modules.applyMethods("wikimethod",$tw.Wiki.prototype);
 	$tw.modules.applyMethods("tiddlerdeserializer",$tw.Wiki.tiddlerDeserializerModules);
+    if($tw.browser) {
+        $tw.wiki.initClientSyncers();
+    }
 	// Set up the parsers
 	$tw.wiki.initParsers();
 	// Set up the syncer object
