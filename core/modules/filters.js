@@ -105,8 +105,20 @@ exports.operators = {
 						return "$tw.utils.pushTop(subResults,currTiddlerTitle);";
 					}
 					break;
-				case "shadow":
-					return "for(title in source) {if(" + op + "this.getTiddler(title).isShadow()) {$tw.utils.pushTop(subResults,title);}}";
+				case "system":
+					return "for(title in source) {if(" + op + "this.getTiddler(title).isSystem()) {$tw.utils.pushTop(subResults,title);}}";
+				case "missing":
+					if(operator.prefix === "!") {
+						return "for(title in source) {$tw.utils.pushTop(subResults,title);}";
+					} else {
+						return "var m = this.getMissingTitles(); for(t=0; t<m.length; t++) {$tw.utils.pushTop(subResults,m[t]);}";
+					}
+				case "orphan":
+					if(operator.prefix === "!") {
+						return "var m = this.getOrphanTitles(); for(title in source) {if(m.indexOf(title) === -1) {$tw.utils.pushTop(subResults,title);}}";
+					} else {
+						return "var m = this.getOrphanTitles(); for(t=0; t<m.length; t++) {$tw.utils.pushTop(subResults,m[t]);}";
+					}
 				default:
 					throw "Unknown operand for 'is' filter operator";
 			}
@@ -121,8 +133,16 @@ exports.operators = {
 						return "r = subResults.indexOf(currTiddlerTitle);\nif(r !== -1) {subResults = [currTiddlerTitle];} else {subResults = [];}";
 					}
 					break;
-				case "shadow":
-					return "for(r=subResults.length-1; r>=0; r--) {if(" + op + "this.getTiddler(subResults[r]).isShadow()) {subResults.splice(r,1);}}";
+				case "system":
+					return "for(r=subResults.length-1; r>=0; r--) {if(" + op + "this.getTiddler(subResults[r]).isSystem()) {subResults.splice(r,1);}}";
+				case "missing":
+					return "t = this.getMissingTitles(); for(r=subResults.length-1; r>=0; r--) {if(" + op + "!$tw.utils.hop(t,subResults[r])) {subResults.splice(r,1);}}";
+				case "orphan":
+					if(operator.prefix === "!") {
+						return "t = this.getOrphanTitles(); for(r=subResults.length-1; r>=0; r--) {if(t.indexOf(subResults[r]) === -1) {subResults.splice(r,1);}}";
+					} else {
+						return "t = this.getOrphanTitles(); for(r=subResults.length-1; r>=0; r--) {if(t.indexOf(subResults[r]) !== -1) {subResults.splice(r,1);}}";
+					}
 				default:
 					throw "Unknown operand for 'is' filter operator";
 			}
@@ -152,6 +172,22 @@ exports.operators = {
 		},
 		filter: function(operator) {
 			return "subResultsTemp = subResults;\nsubResults = [];for(t=subResultsTemp.length-1; t>=0; t--) {$tw.utils.pushTop(subResults,this.getTiddlersWithTag(subResultsTemp[t]));}";
+		}
+	},
+	"links": { // Return outgoing links on selected tiddlers
+		selector: function(operator) {
+			return "for(title in source) {r = this.getTiddlerLinks(title); $tw.utils.pushTop(subResults,r);}";
+		},
+		filter: function(operator) {
+			return "subResultsTemp = subResults;\nsubResults = [];for(t=subResultsTemp.length-1; t>=0; t--) {r = this.getTiddlerLinks(subResultsTemp[t]); $tw.utils.pushTop(subResults,r);}";
+		}
+	},
+	"backlinks": { // Return incoming links on selected tiddlers
+		selector: function(operator) {
+			return "for(title in source) {r = this.getTiddlerBacklinks(title); $tw.utils.pushTop(subResults,r);}";
+		},
+		filter: function(operator) {
+			return "subResultsTemp = subResults;\nsubResults = [];for(t=subResultsTemp.length-1; t>=0; t--) {r = this.getTiddlerBacklinks(subResultsTemp[t]); $tw.utils.pushTop(subResults,r);}";
 		}
 	},
 	"has": { // Filter by presence of a particular field

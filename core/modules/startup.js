@@ -20,18 +20,17 @@ exports.startup = function() {
 	$tw.modules.applyMethods("utils",$tw.utils);
 	if($tw.browser) {
 		$tw.utils.getBrowserInfo($tw.browser);
+        $tw.wiki.initClientSyncers();
 	}
 	$tw.version = $tw.utils.extractVersionInfo();
 	$tw.Tiddler.fieldModules = $tw.modules.getModulesByTypeAsHashmap("tiddlerfield");
 	$tw.modules.applyMethods("tiddlermethod",$tw.Tiddler.prototype);
 	$tw.modules.applyMethods("wikimethod",$tw.Wiki.prototype);
 	$tw.modules.applyMethods("tiddlerdeserializer",$tw.Wiki.tiddlerDeserializerModules);
-	// Set up the wiki store
+	// Set up the parsers
 	$tw.wiki.initParsers();
-	$tw.wiki.initSyncers();
-    if($tw.browser) {
-        $tw.wiki.initClientSyncers();
-    }
+	// Set up the syncer object
+	$tw.syncer = new $tw.Syncer({wiki: $tw.wiki});
 	// Set up the command modules
 	$tw.Commander.initCommands();
 	// Get the default tiddlers
@@ -64,13 +63,6 @@ exports.startup = function() {
 		$tw.modal = new $tw.utils.Modal($tw.wiki);
 		document.addEventListener("tw-modal",function(event) {
 			$tw.modal.display(event.param);
-		},false);
-		// Install the syncer message mechanism
-		document.addEventListener("tw-login",function(event) {
-			$tw.wiki.invokeSyncers("handleLoginEvent",event);
-		},false);
-		document.addEventListener("tw-logout",function(event) {
-			$tw.wiki.invokeSyncers("handleLogoutEvent",event);
 		},false);
 		// Install the scroller
 		$tw.pageScroller = new $tw.utils.PageScroller();
@@ -108,17 +100,20 @@ exports.startup = function() {
 			var styleNode = document.createElement("style");
 			styleNode.type = "text/css";
 			var text = renderTree.render("text/plain");
-			console.log(text)
 			styleNode.appendChild(document.createTextNode(text));
 			document.getElementsByTagName("head")[0].appendChild(styleNode);
 		});
 		// If we're being viewed on a data: URI then give instructions for how to save
 		if(document.location.protocol === "data:") {
-			var event = document.createEvent("Event");
-			event.initEvent("tw-modal",true,true);
-			event.param = "$:/messages/SaveInstructions";
-			document.dispatchEvent(event);
-		} 
+			$tw.utils.dispatchCustomEvent(document,"tw-modal",{
+				param: "$:/messages/SaveInstructions"
+			});
+		} else if($tw.wiki.countTiddlers() === 0){
+			// Otherwise, if give instructions if this is an empty TiddlyWiki
+			$tw.utils.dispatchCustomEvent(document,"tw-modal",{
+				param: "$:/messages/GettingStarted"
+			});
+		}
 		// Display the PageTemplate
 		var templateTitle = "$:/templates/PageTemplate",
 			parser = $tw.wiki.parseTiddler(templateTitle),
@@ -127,7 +122,7 @@ exports.startup = function() {
 		var container = document.createElement("div");
 		document.body.insertBefore(container,document.body.firstChild);
 		renderTree.renderInDom(container);
-		$tw.wiki.addEventListener("",function(changes) {
+		$tw.wiki.addEventListener("change",function(changes) {
 			renderTree.refreshInDom(changes);
 		});
 	} else {

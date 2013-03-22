@@ -57,7 +57,7 @@ $tw.config = $tw.config || {};
 $tw.config.pluginsPath = "../plugins/";
 $tw.config.wikiInfo = $tw.config.wikiInfo || "./tiddlywiki.info";
 $tw.config.wikiPluginsSubDir = $tw.config.wikiPluginsSubDir || "./plugins";
-$tw.config.wikiShadowsSubDir = $tw.config.wikiShadowsSubDir || "./wiki";
+$tw.config.wikiSystemSubDir = $tw.config.wikiSystemSubDir || "./wiki";
 $tw.config.wikiTiddlersSubDir = $tw.config.wikiTiddlersSubDir || "./tiddlers";
 
 $tw.config.jsModuleHeaderRegExpString = "^\\/\\*\\\\\\n((?:^[^\\n]*\\n)+?)(^\\\\\\*\\/$\\n?)";
@@ -107,8 +107,7 @@ Log a message
 */
 $tw.utils.log = function(/* args */) {
 	if(console !== undefined && console.log !== undefined) {
-		return window.console && console.log
-			&& Function.apply.call(console.log, console, arguments);
+		return Function.apply.call(console.log, console, arguments);
 	}
 };
 
@@ -314,6 +313,7 @@ $tw.utils.PasswordPrompt.prototype.createPrompt = function(options) {
 	html.push("<input type='password' name='password' class='input-small' placeholder='Password'>",
 			"<button type='submit' class='btn'>" + submitText + "</button>");
 	form.className = "form-inline";
+	form.setAttribute("autocomplete","off");
 	form.innerHTML = html.join("\n");
 	this.promptWrapper.appendChild(form);
 	window.setTimeout(function() {
@@ -880,7 +880,7 @@ $tw.loadTiddlers = function() {
 		"bootKernel",
 		"styleArea",
 		"storeArea",
-		"shadowArea"
+		"systemArea"
 	];
 	for(var t=0; t<containerIds.length; t++) {
 		$tw.wiki.addTiddlers($tw.wiki.deserializeTiddlers("(DOM)",document.getElementById(containerIds[t])));
@@ -1049,7 +1049,7 @@ $tw.loadTiddlers = function() {
 	// On the server, we load tiddlers from specified folders
 	var folders = [
 		$tw.boot.bootPath,
-		path.resolve($tw.boot.wikiPath,$tw.config.wikiShadowsSubDir),
+		path.resolve($tw.boot.wikiPath,$tw.config.wikiSystemSubDir),
 		path.resolve($tw.boot.wikiPath,$tw.config.wikiTiddlersSubDir)
 	];
 	for(var t=0; t<folders.length; t++) {

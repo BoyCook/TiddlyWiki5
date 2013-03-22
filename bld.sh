@@ -9,7 +9,7 @@ if [  -z "$TW5_BUILD_OUTPUT" ]; then
 fi
 
 if [  ! -d "$TW5_BUILD_OUTPUT" ]; then
-    echo 'A valid TW5_BUILD_OUTPUT directory must be set'
+    echo 'A valid TW5_BUILD_OUTPUT environment variable must be set'
     exit 1
 fi
 
@@ -23,6 +23,10 @@ echo "five.tiddlywiki.com" > $TW5_BUILD_OUTPUT/CNAME
 
 mkdir -p $TW5_BUILD_OUTPUT/static
 
+# Delete any existing content
+
+rm $TW5_BUILD_OUTPUT/static/*
+
 # First,
 #  readme.md: the readme file for GitHub
 #  index.html: the main file, including content
@@ -35,7 +39,7 @@ node ./tiddlywiki.js \
 	--savetiddler $:/core/templates/tiddlywiki5.template.html $TW5_BUILD_OUTPUT/index.html text/plain \
 	--savetiddler $:/core/templates/static.template.html $TW5_BUILD_OUTPUT/static.html text/plain \
 	--savetiddler $:/core/templates/static.template.css $TW5_BUILD_OUTPUT/static/static.css text/plain \
-	--savetiddlers [!is[shadow]] $:/core/templates/static.tiddler.html $TW5_BUILD_OUTPUT/static text/plain \
+	--savetiddlers [!is[system]] $:/core/templates/static.tiddler.html $TW5_BUILD_OUTPUT/static text/plain \
 	|| exit 1
 
 # Second, encrypted.html: a version of the main file encrypted with the password "password"

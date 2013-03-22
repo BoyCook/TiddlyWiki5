@@ -7,7 +7,7 @@ Extension methods for the $tw.Wiki object
 
 Adds the following properties to the wiki object:
 
-* `eventListeners` is an array of {filter: <string>, listener: fn}
+* `eventListeners` is a hashmap by type of arrays of listener functions
 * `changedTiddlers` is a hashmap describing changes to named tiddlers since wiki change events were
 last dispatched. Each entry is a hashmap containing two fields:
 	modified: true/false
@@ -85,19 +85,29 @@ exports.deleteTextReference = function(textRef,currTiddlerTitle) {
 	}
 };
 
-exports.addEventListener = function(filter,listener) {
-	this.eventListeners = this.eventListeners || [];
-	this.eventListeners.push({
-		filter: filter,
-		listener: listener
-	});	
+exports.addEventListener = function(type,listener) {
+	this.eventListeners = this.eventListeners || {};
+	this.eventListeners[type] = this.eventListeners[type]  || [];
+	this.eventListeners[type].push(listener);	
 };
 
-exports.removeEventListener = function(filter,listener) {
-	for(var c=this.eventListeners.length-1; c>=0; c--) {
-		var l = this.eventListeners[c];
-		if(l.filter === filter && l.listener === listener) {
-			this.eventListeners.splice(c,1);
+exports.removeEventListener = function(type,listener) {
+	var listeners = this.eventListeners[type];
+	if(listeners) {
+		var p = listeners.indexOf(listener);
+		if(p !== -1) {
+			listeners.splice(p,1);
+		}
+	}
+};
+
+exports.dispatchEvent = function(type /*, args */) {
+	var args = Array.prototype.slice.call(arguments,1),
+		listeners = this.eventListeners[type];
+	if(listeners) {
+		for(var p=0; p<listeners.length; p++) {
+			var listener = listeners[p];
+			listener.apply(listener,args);
 		}
 	}
 };
@@ -124,15 +134,12 @@ exports.enqueueTiddlerEvent = function(title,isDeleted) {
 	// Trigger events
 	this.eventListeners = this.eventListeners || [];
 	if(!this.eventsTriggered) {
-		var me = this;
+		var self = this;
 		$tw.utils.nextTick(function() {
-			var changes = me.changedTiddlers;
-			me.changedTiddlers = {};
-			me.eventsTriggered = false;
-			for(var e=0; e<me.eventListeners.length; e++) {
-				var listener = me.eventListeners[e];
-				listener.listener(changes);
-			}
+			var changes = self.changedTiddlers;
+			self.changedTiddlers = {};
+			self.eventsTriggered = false;
+			self.dispatchEvent("change",changes);
 		});
 		this.eventsTriggered = true;
 	}
@@ -185,13 +192,13 @@ exports.addTiddler = function(tiddler) {
 };
 
 /*
-Return a sorted array of tiddler titles, optionally filtered by a tag 
+Return a sorted array of non-system tiddler titles, optionally filtered by a tag 
 */
 exports.getTiddlers = function(sortField,excludeTag) {
 	sortField = sortField || "title";
 	var tiddlers = [], t, titles = [];
 	for(t in this.tiddlers) {
-		if($tw.utils.hop(this.tiddlers,t) && !this.tiddlers[t].isShadow()) {
+		if($tw.utils.hop(this.tiddlers,t) && !this.tiddlers[t].isSystem() && (!excludeTag || !this.tiddlers[t].hasTag(excludeTag))) {
 			tiddlers.push(this.tiddlers[t]);
 		}
 	}
@@ -209,11 +216,14 @@ exports.getTiddlers = function(sortField,excludeTag) {
 		}
 	});
 	for(t=0; t<tiddlers.length; t++) {
-		if(!excludeTag || !tiddlers[t].hasTag(excludeTag)) {
-			titles.push(tiddlers[t].fields.title);
-		}
+		titles.push(tiddlers[t].fields.title);
 	}
 	return titles;
+};
+
+exports.countTiddlers = function(excludeTag) {
+	var tiddlers = this.getTiddlers(null,excludeTag);
+	return $tw.utils.count(tiddlers);
 };
 
 /*
@@ -277,18 +287,90 @@ exports.forEachTiddler = function(/* [sortField,[excludeTag,]]callback */) {
 	}
 };
 
+/*
+Return an array of tiddler titles that are directly linked from the specified tiddler
+*/
+exports.getTiddlerLinks = function(title) {
+	var self = this;
+	// We'll cache the links so they only get computed if the tiddler changes
+	return this.getCacheForTiddler(title,"links",function() {
+		// Parse the tiddler
+		var parser = self.parseTiddler(title);
+		// Count up the links
+		var links = [],
+			checkParseTree = function(parseTree) {
+				for(var t=0; t<parseTree.length; t++) {
+					var parseTreeNode = parseTree[t];
+					if(parseTreeNode.type === "element" && parseTreeNode.tag === "$link" && parseTreeNode.attributes.to.type === "string") {
+						var value = parseTreeNode.attributes.to.value;
+						if(links.indexOf(value) === -1) {
+							links.push(value);
+						}
+					}
+					if(parseTreeNode.children) {
+						checkParseTree(parseTreeNode.children);
+					}
+				}
+			};
+		if(parser) {
+			checkParseTree(parser.tree);
+		}
+		return links;
+	});
+};
+
+/*
+Return an array of tiddler titles that link to the specified tiddler
+*/
+exports.getTiddlerBacklinks = function(targetTitle) {
+	var self = this,
+		backlinks = [];
+	this.forEachTiddler(function(title,tiddler) {
+		var links = self.getTiddlerLinks(title);
+		if(links.indexOf(targetTitle) !== -1) {
+			backlinks.push(title);
+		}
+	});
+	return backlinks;
+};
+
+/*
+Return a hashmap of tiddler titles that are referenced but not defined. Each value is the number of times the missing tiddler is referenced
+*/
 exports.getMissingTitles = function() {
-	return []; // Todo
+	var self = this,
+		missing = [];
+// We should cache the missing tiddler list, even if we recreate it every time any tiddler is modified
+	this.forEachTiddler(function(title,tiddler) {
+		var links = self.getTiddlerLinks(title);
+		$tw.utils.each(links,function(link) {
+			if(!self.tiddlerExists(link) && missing.indexOf(link) === -1) {
+				missing.push(link);
+			}
+		});
+	});
+	return missing;
 };
 
 exports.getOrphanTitles = function() {
-	return []; // Todo
+	var self = this,
+		orphans = this.getTiddlers();
+	this.forEachTiddler(function(title,tiddler) {
+		var links = self.getTiddlerLinks(title);
+		$tw.utils.each(links,function(link) {
+			var p = orphans.indexOf(link);
+			if(p !== -1) {
+				orphans.splice(p,1);
+			}
+		});
+	});
+	return orphans; // Todo
 };
 
-exports.getShadowTitles = function() {
+exports.getSystemTitles = function() {
 	var titles = [];
 	for(var title in this.tiddlers) {
-		if(this.tiddlers[title].isShadow()) {
+		if(this.tiddlers[title].isSystem()) {
 			titles.push(title);
 		}
 	}
@@ -339,19 +421,19 @@ exports.getTiddlerData = function(title,defaultData) {
 };
 
 /*
- Extract an indexed field from within a data tiddler
- */
+Extract an indexed field from within a data tiddler
+*/
 exports.extractTiddlerDataItem = function(title,index,defaultText) {
-    var data = this.getTiddlerData(title,{}),
-        text;
-    if(data) {
-        text = this.walkJSON(this.getJSONElements(index), data, 0);
-    }
-    if(typeof text === "string" || typeof text === "number") {
-        return text.toString();
-    } else {
-        return defaultText;
-    }
+	var data = this.getTiddlerData(title,{}),
+		text;
+	if(data && $tw.utils.hop(data,index)) {
+		text = data[index];
+	}
+	if(typeof text === "string" || typeof text === "number") {
+		return text.toString();
+	} else {
+		return defaultText;
+	}
 };
 
 /*
@@ -518,6 +600,59 @@ exports.renderTiddler = function(outputType,title) {
 	return renderTree.render(outputType);
 };
 
+    /*
+     Initialise server syncers
+     */
+    exports.initServerSyncers = function() {
+        this.serverSyncers = {};
+        var self = this;
+        $tw.modules.forEachModuleOfType("server-syncer",function(title,module) {
+            if(module.name && module.syncer) {
+                self.serverSyncers[module.name] = new module.syncer({
+                    wiki: self
+                });
+            }
+        });
+    };
+
+    /*
+     Invoke all the server syncers
+     */
+    exports.invokeServerSyncers = function(method /* ,args */) {
+        var args = Array.prototype.slice.call(arguments,1);
+        for(var title in this.serverSyncers) {
+            var syncer = this.serverSyncers[title];
+            syncer[method].apply(syncer,args);
+        }
+    };
+
+
+    /*
+     Initialise client syncers
+     */
+    exports.initClientSyncers = function() {
+        this.clientSyncers = {};
+        var self = this;
+        $tw.modules.forEachModuleOfType("client-syncer",function(title,module) {
+            if(module.name && module.syncer) {
+                self.clientSyncers[module.name] = new module.syncer({
+                    wiki: self
+                });
+            }
+        });
+    };
+
+    /*
+     Invoke all the client syncers
+     */
+    exports.invokeClientSyncers = function(method /* ,args */) {
+        var args = Array.prototype.slice.call(arguments,1);
+        for(var title in this.clientSyncers) {
+            var syncer = this.clientSyncers[title];
+            syncer[method].apply(syncer,args);
+        }
+    };    
+    
 /*
 Select the appropriate saver modules and set them up
 */
@@ -584,7 +719,7 @@ Options available:
 */
 exports.search = function(text,options) {
 	options = options || {};
-	var me = this,t;
+	var self = this,t;
 	// Convert the search string into a regexp for each term
 	var terms, searchTermsRegExps,
 		flags = options.caseSensitive ? "" : "i";
@@ -605,7 +740,7 @@ exports.search = function(text,options) {
 	}
 	// Function to check a given tiddler for the search term
 	var searchTiddler = function(title) {
-		var tiddler = me.getTiddler(title);
+		var tiddler = self.getTiddler(title);
 		if(!tiddler) {
 			return !!options.invert;
 		}
@@ -651,89 +786,6 @@ exports.search = function(text,options) {
 };
 
 /*
-Initialise syncers
-*/
-exports.initSyncers = function() {
-	this.syncers = {};
-	var self = this;
-	$tw.modules.forEachModuleOfType("syncer",function(title,module) {
-		if(module.name && module.syncer) {
-			self.syncers[module.name] = new module.syncer({
-				wiki: self
-			});
-		}
-	});
-};
-
-/*
- Initialise server syncers
- */
-exports.initServerSyncers = function() {
-    this.serverSyncers = {};
-    var self = this;
-    $tw.modules.forEachModuleOfType("server-syncer",function(title,module) {
-        if(module.name && module.syncer) {
-            self.serverSyncers[module.name] = new module.syncer({
-                wiki: self
-            });
-        }
-    });
-};
-
-/*
- Invoke all the server syncers
- */
-exports.invokeServerSyncers = function(method /* ,args */) {
-    var args = Array.prototype.slice.call(arguments,1);
-    for(var title in this.serverSyncers) {
-        var syncer = this.serverSyncers[title];
-        syncer[method].apply(syncer,args);
-    }
-};
-
-
-/*
- Initialise client syncers
- */
-exports.initClientSyncers = function() {
-    this.clientSyncers = {};
-    var self = this;
-    $tw.modules.forEachModuleOfType("client-syncer",function(title,module) {
-        if(module.name && module.syncer) {
-            self.clientSyncers[module.name] = new module.syncer({
-                wiki: self
-            });
-        }
-    });
-};
-
-/*
- Invoke all the client syncers
- */
-exports.invokeClientSyncers = function(method /* ,args */) {
-    var args = Array.prototype.slice.call(arguments,1);
-    for(var title in this.clientSyncers) {
-        var syncer = this.clientSyncers[title];
-        syncer[method].apply(syncer,args);
-    }
-};
-
-//TODO: create generic invokeModules function
-
-/*
-Invoke all the active syncers
-*/
-exports.invokeSyncers = function(method /* ,args */) {
-	var args = Array.prototype.slice.call(arguments,1);
-	for(var name in this.syncers) {
-		var syncer = this.syncers[name];
-		if(syncer[method]) {
-			syncer[method].apply(syncer,args);
-		}
-	}
-};
-
-/*
 Trigger a load for a tiddler if it is skinny. Returns the text, or undefined if the tiddler is missing, null if the tiddler is being lazily loaded.
 */
 exports.getTiddlerText = function(title,defaultText) {
@@ -746,8 +798,8 @@ exports.getTiddlerText = function(title,defaultText) {
 		// Just return the text if we've got it
 		return tiddler.fields.text;
 	} else {
-		// Ask all the syncers to load the tiddler if they can
-		this.invokeSyncers("lazyLoad",title,tiddler);
+		// Tell any listeners about the need to lazily load this tiddler
+		this.dispatchEvent("lazyLoad",title);
 		// Indicate that the text is being loaded
 		return null;
 	}
