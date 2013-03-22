@@ -51,7 +51,7 @@ SimpleServer.prototype.addRoute = function(route) {
 
 SimpleServer.prototype.listen = function(port) {
 	var self = this;
-	var app = http.createServer(function(request, response) {
+	http.createServer(function(request, response) {
 		// Compose the state object
 		var state = {};
 		state.wiki = self.wiki;
@@ -95,11 +95,7 @@ SimpleServer.prototype.listen = function(port) {
 				});
 				break;
 		}
-	});
-    var io = require('socket.io').listen(app);
-    io.set('log level', 1);
-    app.listen(port);
-    $tw.server = {app: app, io: io};
+	}).listen(port);
 };
 
 var Command = function(params,commander,callback) {
@@ -234,7 +230,6 @@ Command.prototype.execute = function() {
 		serveType: serveType
 	});
 	this.server.listen(port);
-    $tw.wiki.initServerSyncers();    
 	if(this.commander.verbose) {
 		console.log("Serving on port " + port);
 	}
