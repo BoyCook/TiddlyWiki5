@@ -44,7 +44,7 @@ exports.getTextReference = function(textRef,defaultText,currTiddlerTitle) {
 	} else if(tr.index) {
 		return this.extractTiddlerDataItem(title,tr.index,defaultText);
 	} else {
-		return this.getTiddlerText(title);
+		return this.getTiddlerText(title,defaultText);
 	}
 };
 
@@ -593,10 +593,10 @@ Parse text from a tiddler and render it into another format
 	outputType: content type for the output
 	title: title of the tiddler to be rendered
 */
-exports.renderTiddler = function(outputType,title) {
+exports.renderTiddler = function(outputType,title,renderContext) {
 	var parser = this.parseTiddler(title),
 		renderTree = new $tw.WikiRenderTree(parser,{wiki: this});
-	renderTree.execute();
+	renderTree.execute(renderContext);
 	return renderTree.render(outputType);
 };
 

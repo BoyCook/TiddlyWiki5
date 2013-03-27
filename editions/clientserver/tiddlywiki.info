@@ -1,6 +1,15 @@
 {
 	"plugins": [
-		"tiddlywiki/tiddlyweb"
+		"tiddlywiki/tiddlyweb",
+		"tiddlywiki/filesystem"
 	],
-	"parentWiki": "../tw5.com"
+	"doNotSave": [
+		"$:/StoryList",
+		"$:/HistoryList",
+		"$:/status/IsLoggedIn",
+		"$:/status/UserName"
+	],
+	"includeWikis": [
+		"../tw5.com"
+	]
 }
