@@ -17,8 +17,11 @@ var ClassicListView = function(listWidget) {
 }
 
 ClassicListView.prototype.navigateTo = function(historyInfo) {
-	var listElementIndex = this.listWidget.findListElementByTitle(0,historyInfo.title),
-		listElementNode = this.listWidget.children[listElementIndex],
+	var listElementIndex = this.listWidget.findListElementByTitle(0,historyInfo.title);
+	if(listElementIndex === undefined) {
+		return;
+	}
+	var listElementNode = this.listWidget.children[listElementIndex],
 		targetElement = listElementNode.domNode;
 	// Scroll the node into view
 	var scrollEvent = document.createEvent("Event");
@@ -84,7 +87,7 @@ ClassicListView.prototype.remove = function(index) {
 		{transition: $tw.utils.roundTripPropertyName("transform") + " " + $tw.config.preferences.animationDurationMs + " ease-in-out, " +
 					"opacity " + $tw.config.preferences.animationDurationMs + " ease-in-out, " +
 					"margin-bottom " + $tw.config.preferences.animationDurationMs + " ease-in-out"},
-		{transform: "translateX(" + currWidth + "px)"},
+		{transform: "translateX(-" + currWidth + "px)"},
 		{marginBottom: (-currHeight) + "px"},
 		{opacity: "0.0"}
 	]);

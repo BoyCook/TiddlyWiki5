@@ -31,21 +31,21 @@ Getting started with <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylin
 TiddlyWiki</a> under node.js</h1><div class='tw-transclude'>
 <p>
 <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWiki5.html'>
-TiddlyWiki5</a> can be used on the command line to perform an extensive set of operations based on tiddlers, <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlerFiles.html'>
+TiddlyWiki5</a> can be used on the command line to perform an extensive set of operations based on tiddlers, <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWikiFolders.html'>
+TiddlyWikiFolders</a>, <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlerFiles.html'>
 TiddlerFiles</a> and <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-missing' href='http://five.tiddlywiki.com/static/TiddlyWikiFiles.html'>
-TiddlyWikiFiles</a>. For example, this loads the tiddlers from a <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWiki.html'>
+TiddlyWikiFiles</a>. For example, the following command loads the tiddlers from a <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWiki.html'>
 TiddlyWiki</a> HTML file and then saves one of them in HTML:</p><pre>
 node tiddlywiki.js --verbose --load mywiki.html --savetiddler ReadMe ./readme.html</pre><p>
 In order to use <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWiki5.html'>
-TiddlyWiki5</a> on the command line you must first install node.js:</p><p>
-<a class='tw-tiddlylink tw-tiddlylink-external' href='http://nodejs.org/'>
+TiddlyWiki5</a> on the command line you must first install node.js from <a class='tw-tiddlylink tw-tiddlylink-external' href='http://nodejs.org/'>
 http://nodejs.org/</a></p><h2 class=''>
 Usage</h2><p>
 Running <code>
 tiddlywiki.js</code> from the command line boots the <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWiki.html'>
 TiddlyWiki</a> kernel, loads the core plugins and establishes an empty wiki store. It then sequentially processes the command line arguments from left to right. The arguments are separated with spaces.</p><p>
-The first argument is the optional path to the <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-missing' href='http://five.tiddlywiki.com/static/WikiDirectory.html'>
-WikiDirectory</a> to be loaded. If not present, then the current directory is used.</p><p>
+The first argument is the optional path to the <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWikiFolders.html'>
+TiddlyWikiFolder</a> to be loaded. If not present, then the current directory is used.</p><p>
 The commands and their individual arguments follow, each command being identified by the prefix <code>
 --</code>.</p><pre>
 node tiddlywiki.js [&lt;wikipath&gt;] [--&lt;command&gt; [&lt;arg&gt;[,&lt;arg&gt;]]]</pre><h2 class=''>
@@ -63,8 +63,8 @@ TiddlyWiki5</a> directory. You will need to create the directory before running 
 * /TiddlyWork/TiddlyWiki5/ - Directory containing the TiddlyWiki5 repo from GitHub
 * /TiddlyWork/jermolene.github.com/ - Directory for output files</pre><p>
 You can override the build output directory by defining the environment variable <code>
-TW5_BUILD_OUTPUT</code>. The easiest way to do this is to create a personal batch file to invoke <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-missing' href='http://five.tiddlywiki.com/static/TiddlyWik5i.html'>
-TiddlyWik5i</a> that first sets the environment variable and then invokes <code>
+TW5_BUILD_OUTPUT</code>. The easiest way to do this is to create a personal batch file to invoke <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWiki5.html'>
+TiddlyWiki5</a> that first sets the environment variable and then invokes <code>
 bld.sh</code>.</p><p>
 The files output by <code>
 bld.sh</code> are:</p><ul>
@@ -114,7 +114,7 @@ opendiff</code> program to display the differences between them.</p><h2 class=''
 Commands</h2><p>
 The following commands are available:</p><div class='tw-list-frame'>
 <div class='tw-list-element'>
-<span class='tw-transclude'>
+<div class='tw-transclude'>
 <h3 class=''>
 <span class='tw-view-link'>
 <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/DumpCommand.html'>
@@ -132,8 +132,8 @@ Dump the titles of the system tiddlers in the wiki store </p><pre>
 --dump systems</pre><h3 class=''>
 dump config</h3><p>
 Dump the current core configuration </p><pre>
---dump config</pre></div></div></span></div><div class='tw-list-element'>
-<span class='tw-transclude'>
+--dump config</pre></div></div></div></div><div class='tw-list-element'>
+<div class='tw-transclude'>
 <h3 class=''>
 <span class='tw-view-link'>
 <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/LoadCommand.html'>
@@ -146,8 +146,8 @@ TiddlyWiki</a> files (<code>
 .tiddler</code>, <code>
 .tid</code>, <code>
 .json</code> or other files </p><pre>
---load &lt;filepath&gt;</pre></div></div></span></div><div class='tw-list-element'>
-<span class='tw-transclude'>
+--load &lt;filepath&gt;</pre></div></div></div></div><div class='tw-list-element'>
+<div class='tw-transclude'>
 <h3 class=''>
 <span class='tw-view-link'>
 <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/SaveTiddlerCommand.html'>
@@ -157,8 +157,8 @@ SaveTiddlerCommand</a></span></h3><div>
 Save an individual tiddler as a specified <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-missing' href='http://five.tiddlywiki.com/static/ContentType.html'>
 ContentType</a>, defaults to <code>
 text/html</code> </p><pre>
---savetiddler &lt;title&gt; &lt;filename&gt; [&lt;type&gt;]</pre></div></div></span></div><div class='tw-list-element'>
-<span class='tw-transclude'>
+--savetiddler &lt;title&gt; &lt;filename&gt; [&lt;type&gt;]</pre></div></div></div></div><div class='tw-list-element'>
+<div class='tw-transclude'>
 <h3 class=''>
 <span class='tw-view-link'>
 <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/SaveTiddlersCommand.html'>
@@ -171,8 +171,8 @@ text/html</code>) and extension (defaults to <code>
 .html</code>).</p><pre>
 --savetiddlers &lt;filter&gt; &lt;template&gt; &lt;pathname&gt; [&lt;type&gt;] [&lt;extension&gt;]</pre><p>
 For example:</p><pre>
---savetiddlers [!is[system]] $:/core/templates/static.tiddler.html ./static text/plain</pre></div></div></span></div><div class='tw-list-element'>
-<span class='tw-transclude'>
+--savetiddlers [!is[system]] $:/core/templates/static.tiddler.html ./static text/plain</pre></div></div></div></div><div class='tw-list-element'>
+<div class='tw-transclude'>
 <h3 class=''>
 <span class='tw-view-link'>
 <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/ServerCommand.html'>
@@ -200,8 +200,8 @@ roottiddler</strong> - the tiddler to serve at the root (defaults to &quot;$:/co
 <strong>
 rendertype</strong> - the content type to which the root tiddler should be rendered (defaults to &quot;text/plain&quot;)</li><li>
 <strong>
-servetype</strong> - the content type with which the root tiddler should be served (defaults to &quot;text/html&quot;)</li></ul></div></div></span></div><div class='tw-list-element'>
-<span class='tw-transclude'>
+servetype</strong> - the content type with which the root tiddler should be served (defaults to &quot;text/html&quot;)</li></ul></div></div></div></div><div class='tw-list-element'>
+<div class='tw-transclude'>
 <h3 class=''>
 <span class='tw-view-link'>
 <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/VerboseCommand.html'>
@@ -209,8 +209,8 @@ VerboseCommand</a></span></h3><div>
 <div class='tw-transclude'>
 <p>
 Triggers verbose output, useful for debugging </p><pre>
---verbose</pre></div></div></span></div><div class='tw-list-element'>
-<span class='tw-transclude'>
+--verbose</pre></div></div></div></div><div class='tw-list-element'>
+<div class='tw-transclude'>
 <h3 class=''>
 <span class='tw-view-link'>
 <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/VersionCommand.html'>
@@ -219,7 +219,7 @@ VersionCommand</a></span></h3><div>
 <p>
 Displays the version number of <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWiki.html'>
 TiddlyWiki</a>.</p><pre>
---version</pre></div></div></span></div></div></div><p>
+--version</pre></div></div></div></div></div></div><p>
 <em>
 This readme file was automatically generated by <a class='tw-tiddlylink tw-tiddlylink-internal tw-tiddlylink-resolves' href='http://five.tiddlywiki.com/static/TiddlyWiki5.html'>
 TiddlyWiki5</a></em>

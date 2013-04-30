@@ -78,10 +78,15 @@ exports.filterFragments = {
 exports.operators = {
 	"title": { // Filter by title
 		selector: function(operator) {
-			return "$tw.utils.pushTop(subResults,\"" + $tw.utils.stringify(operator.operand) + "\");";
+			if(operator.prefix === "!") {
+				return "for(title in source) {if(title !== \"" + $tw.utils.stringify(operator.operand) + "\") {$tw.utils.pushTop(subResults,title);}}";
+			} else {
+				return "$tw.utils.pushTop(subResults,\"" + $tw.utils.stringify(operator.operand) + "\");";
+			}
 		},
 		filter: function(operator) {
-			return "if(subResults.indexOf(\"" + $tw.utils.stringify(operator.operand) + "\") !== -1) {subResults = [\"" + $tw.utils.stringify(operator.operand) + "\"];} else {subResults = [];}";
+			var op = operator.prefix === "!" ? "!" : "=";
+			return "if(subResults.indexOf(\"" + $tw.utils.stringify(operator.operand) + "\") " + op + "== -1) {subResults = [\"" + $tw.utils.stringify(operator.operand) + "\"];} else {subResults = [];}";
 		}
 	},
 	"prefix": { // Filter by title prefix
@@ -106,7 +111,13 @@ exports.operators = {
 					}
 					break;
 				case "system":
-					return "for(title in source) {if(" + op + "this.getTiddler(title).isSystem()) {$tw.utils.pushTop(subResults,title);}}";
+					return "for(title in source) {if(" + op + "this.isSystemTiddler(title)) {$tw.utils.pushTop(subResults,title);}}";
+				case "shadow":
+					if(operator.prefix === "!") {
+						return "for(title in source) {if(!this.isShadowTiddler(title)) {$tw.utils.pushTop(subResults,title);}}";
+					} else {
+						return "for(title in this.shadowTiddlers) {$tw.utils.pushTop(subResults,title);}";
+					}
 				case "missing":
 					if(operator.prefix === "!") {
 						return "for(title in source) {$tw.utils.pushTop(subResults,title);}";
@@ -134,7 +145,9 @@ exports.operators = {
 					}
 					break;
 				case "system":
-					return "for(r=subResults.length-1; r>=0; r--) {if(" + op + "this.getTiddler(subResults[r]).isSystem()) {subResults.splice(r,1);}}";
+					return "for(r=subResults.length-1; r>=0; r--) {if(" + op + "this.isSystemTiddler(subResults[r])) {subResults.splice(r,1);}}";
+				case "shadow":
+					return "for(r=subResults.length-1; r>=0; r--) {if(" + op + "this.isShadowTiddler(subResults[r])) {subResults.splice(r,1);}}";
 				case "missing":
 					return "t = this.getMissingTitles(); for(r=subResults.length-1; r>=0; r--) {if(" + op + "!$tw.utils.hop(t,subResults[r])) {subResults.splice(r,1);}}";
 				case "orphan":

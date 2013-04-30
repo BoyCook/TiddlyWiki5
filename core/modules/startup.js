@@ -92,19 +92,9 @@ exports.startup = function() {
 		document.addEventListener("tw-clear-password",function(event) {
 			$tw.crypto.setPassword(null);
 		});
-		// Apply stylesheets
-		var styleTiddlers = $tw.wiki.getTiddlersWithTag("$:/core/styles");
-		$tw.utils.each(styleTiddlers,function(title) {
-			// Stylesheets don't refresh, yet
-			var parser = $tw.wiki.parseTiddler(title),
-				renderTree = new $tw.WikiRenderTree(parser,{wiki: $tw.wiki});
-			renderTree.execute({tiddlerTitle: title});
-			var styleNode = document.createElement("style");
-			styleNode.type = "text/css";
-			var text = renderTree.render("text/plain");
-			styleNode.appendChild(document.createTextNode(text));
-			document.getElementsByTagName("head")[0].appendChild(styleNode);
-		});
+		// Kick off the theme and the stylesheet manager
+		$tw.themeManager = new $tw.ThemeManager($tw.wiki);
+		$tw.stylesheetManager = new $tw.utils.StylesheetManager($tw.wiki);
 		// If we're being viewed on a data: URI then give instructions for how to save
 		if(document.location.protocol === "data:") {
 			$tw.utils.dispatchCustomEvent(document,"tw-modal",{
