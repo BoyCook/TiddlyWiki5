@@ -179,6 +179,9 @@ exports.isTemporaryTiddler = function(title) {
 	return title.indexOf("$:/temp/") === 0;
 };
 
+/*
+Determines if a tiddler is a shadow tiddler, regardless of whether it has been overridden by a real tiddler
+*/
 exports.isShadowTiddler = function(title) {
 	return $tw.utils.hop(this.shadowTiddlers,title);
 };

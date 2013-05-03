@@ -619,7 +619,7 @@ Construct a wiki store object
 */
 $tw.Wiki = function() {
 	this.tiddlers = {};
-	this.plugins = {}; // Hashmap of plugin information by title
+	this.plugins = []; // Array of registered plugins, ordered by priority
 	this.shadowTiddlers = {}; // Hashmap by title of {source:, tiddler:}
 };
 
@@ -637,19 +637,54 @@ $tw.Wiki.prototype.addTiddlers = function(tiddlers) {
 };
 
 /*
-Extract constituent tiddlers from plugin tiddlers so that we can easily access them in getTiddler()
+Register the plugin tiddlers of a particular type, optionally restricting registration to an array of tiddler titles. Return the array of titles affected
 */
-$tw.Wiki.prototype.unpackPluginTiddlers = function(pluginType) {
-	// Collect up the titles of all the plugin tiddlers
+$tw.Wiki.prototype.registerPluginTiddlers = function(pluginType,titles) {
 	var self = this,
-		pluginInfoList = [];
-	$tw.utils.each(this.tiddlers,function(tiddler,title,object) {
-		if(tiddler.fields.type === "application/json" && tiddler.hasField("plugin") && tiddler.fields["plugin-type"] === pluginType) {
-			pluginInfoList.push(tiddler);
+		registeredTitles = [];
+	// Go through the provided titles, or the entire tiddler list, looking for plugins of this type
+	var checkTiddler = function(tiddler) {
+		if(tiddler && tiddler.fields.type === "application/json" && tiddler.hasField("plugin") && tiddler.fields["plugin-type"] === pluginType) {
+			self.plugins.push(tiddler);
+			registeredTitles.push(tiddler.fields.title);
 		}
-	});
-	// Sort the titles by the `plugin-priority` field
-	pluginInfoList.sort(function(a,b) {
+	};
+	if(titles) {
+		$tw.utils.each(titles,function(title) {
+			checkTiddler(self.getTiddler(title));
+		});
+	} else {
+		$tw.utils.each(this.tiddlers,function(tiddler,title) {
+			checkTiddler(tiddler);
+		});
+	}
+	return registeredTitles;
+};
+
+/*
+Unregister the plugin tiddlers of a particular type, returning an array of the titles affected
+*/
+$tw.Wiki.prototype.unregisterPluginTiddlers = function(pluginType) {
+	var self = this,
+		titles = [];
+	// Remove any previous registered plugins of this type
+	for(var t=this.plugins.length-1; t>=0; t--) {
+		var tiddler = this.plugins[t];
+		if(tiddler.fields["plugin-type"] === pluginType) {
+			titles.push(tiddler.fields.title);
+			this.plugins.splice(t,1);
+		}
+	}
+	return titles;
+};
+
+/*
+Unpack the currently registered plugins, creating shadow tiddlers for their constituent tiddlers
+*/
+$tw.Wiki.prototype.unpackPluginTiddlers = function() {
+	var self = this;
+	// Sort the plugin titles by the `plugin-priority` field
+	this.plugins.sort(function(a,b) {
 		if("plugin-priority" in a.fields && "plugin-priority" in b.fields) {
 			return a.fields["plugin-priority"] - b.fields["plugin-priority"];
 		} else if("plugin-priority" in a.fields) {
@@ -664,10 +699,11 @@ $tw.Wiki.prototype.unpackPluginTiddlers = function(pluginType) {
 			return +1;
 		}
 	});
-	// Now go through the plugins in ascending order
-	$tw.utils.each(pluginInfoList,function(tiddler) {
-		// Save the plugin information
-		var pluginInfo = self.plugins[tiddler.fields.title] = JSON.parse(tiddler.fields.text);
+	// Now go through the plugins in ascending order and assign the shadows
+	this.shadowTiddlers = {};
+	$tw.utils.each(this.plugins,function(tiddler) {
+		// Get the plugin information
+		var pluginInfo = JSON.parse(tiddler.fields.text);
 		// Extract the constituent tiddlers
 		$tw.utils.each(pluginInfo.tiddlers,function(constituentTiddler,constituentTitle) {
 			// Save the tiddler object
@@ -706,7 +742,7 @@ $tw.Wiki.prototype.defineTiddlerModules = function() {
 /*
 Register all the module tiddlers that have a module type
 */
-$tw.Wiki.prototype.definePluginModules = function() {
+$tw.Wiki.prototype.defineShadowModules = function() {
 	var self = this;
 	$tw.utils.each(this.shadowTiddlers,function(element,title) {
 		var tiddler = self.getTiddler(title);
@@ -1040,6 +1076,9 @@ $tw.loadPluginFolder = function(filepath,excludeRegExp) {
 			plugin: "yes",
 			text: JSON.stringify(pluginInfo,null,4),
 			"plugin-priority": pluginInfo["plugin-priority"],
+			"name": pluginInfo["name"],
+			"thumbnail": pluginInfo["thumbnail"],
+			"description": pluginInfo["description"],
 			"plugin-type": pluginInfo["plugin-type"] || "plugin"
 		}
 		return fields;
@@ -1196,6 +1235,7 @@ $tw.boot.startup = function() {
 	$tw.utils.registerFileType("image/png","base64",".png");
 	$tw.utils.registerFileType("image/gif","base64",".gif");
 	$tw.utils.registerFileType("image/svg+xml","utf8",".svg");
+	$tw.utils.registerFileType("application/font-woff","base64",".woff");
 	// Create the wiki store for the app
 	$tw.wiki = new $tw.Wiki();
 	// Install built in tiddler fields modules
@@ -1206,11 +1246,12 @@ $tw.boot.startup = function() {
 	// Load tiddlers
 	$tw.loadTiddlers();
 	// Unpack plugin tiddlers
-	$tw.wiki.unpackPluginTiddlers("plugin");
+	$tw.wiki.registerPluginTiddlers("plugin");
+	$tw.wiki.unpackPluginTiddlers();
 	// Register typed modules from the tiddlers we've just loaded
 	$tw.wiki.defineTiddlerModules();
 	// And any modules within plugins
-	$tw.wiki.definePluginModules();
+	$tw.wiki.defineShadowModules();
 	// Make sure the crypto state tiddler is up to date
 	$tw.crypto.updateCryptoStateTiddler();
 	// Run any startup modules

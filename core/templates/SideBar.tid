@@ -3,9 +3,12 @@ title: $:/templates/SideBar
 <!-- The implementation of tabs here is currently a bit unreadable -->
 
 <div class="tw-sidebar-lists">
-@@.search-query
-<$edit tiddler="$:/temp/search" type="search" requireFocus="yes"/>
-@@
+
+<$linkcatcher to="$:/temp/search">
+
+<div class="tw-search"><$edit tiddler="$:/temp/search" type="search" requireFocus="yes"/><$reveal state="$:/temp/search" type="nomatch" text=""> <$link to="" class="btn-invisible">{{$:/core/images/close-button.svg}}</$link></$reveal></div>
+
+</$linkcatcher>
 
 <$reveal state="$:/temp/search" type="nomatch" text="">
 
@@ -18,6 +21,11 @@ title: $:/templates/SideBar
 </$reveal>
 
 <$reveal state="$:/temp/search" type="match" text="">
+
+<div class="tw-page-controls">
+<$button message="tw-new-tiddler" class="btn-invisible">{{$:/core/images/new-button.svg}}</$button>
+<$link to="$:/ControlPanel">{{$:/core/images/options-button.svg}}</$link>
+</div>
 
 <div class="tw-tab-set">
 <div class="tw-tab-buttons"><$button type="set" set="$:/state/sideBarTabSet" setTo="openTab" qualifyTiddlerTitles="yes" selectedClass="tw-tab-selected">Open</$button><$button type="set" set="$:/state/sideBarTabSet" setTo="allTab" qualifyTiddlerTitles="yes" selectedClass="tw-tab-selected">All</$button><$button type="set" set="$:/state/sideBarTabSet" setTo="toolsTab" qualifyTiddlerTitles="yes" selectedClass="tw-tab-selected">Tools</$button><$button type="set" set="$:/state/sideBarTabSet" setTo="moreTab" qualifyTiddlerTitles="yes" selectedClass="tw-tab-selected">More</$button></div>
@@ -34,8 +42,7 @@ title: $:/templates/SideBar
 <$list filter="[!is[system]sort[title]]" itemClass="tw-menu-list-item"/>
 </$reveal>
 <$reveal type="match" state="$:/state/sideBarTabSet" text="toolsTab" qualifyTiddlerTitles="yes">
-{{$:/templates/ControlPanel}}
-{{$:/templates/ServerControlPanel}}
+{{$:/templates/ToolsPanel}}
 </$reveal>
 <$reveal type="match" state="$:/state/sideBarTabSet" text="moreTab" qualifyTiddlerTitles="yes">
 {{$:/templates/MoreSideBar}}
