@@ -1,4 +1,4 @@
-modified: 201305011440
+modified: 201305132202
 title: RoadMap
 modifier: JeremyRuston
 tags: docs planning
@@ -27,13 +27,17 @@ TiddlyWiki5 will progress to a beta release when it is practical for cautious ev
 
 Some of the additional features under consideration during the beta include:
 
+* Warning when attempting to close window without saving
+* Use browser local storage to preserve changes in case browser crashes before saving/sync
+* Multilanguage support
 * Ability to ~~inspect and~~ edit tiddler fields
+* Seamless editing
 * Aliases/inheritance
 * WikiText ~~table and~~ block quote support
 * More user interface widgets, including: ~tabs~, popovers, toolbars, carousel, ~dropdown~,
 * ~~Checkbox support~~
 * ~~Search~~
-* Tiddler themes and wiki themes
+* Tiddler themes and ~~wiki themes~~
 * Text references: slices and sections, JSON references
 * ~~Timed refreshed relative dates (eg, 'last modified 30 minutes ago')~~
 * Encrypted tiddlers and ~~encrypted TiddlyWikis~~
