@@ -160,7 +160,7 @@ exports.parseMacroParameter = function(source,pos) {
 	var node = {
 		type: "macro-parameter",
 		start: pos
-	}
+	};
 	// Define our regexp
 	var reMacroParameter = /(?:([A-Za-z0-9\-_]+)\s*:)?(?:\s*(?:"([^"]*)"|'([^']*)'|\[\[([^\]]*)\]\]|([^\s>"'=]+)))/g;
 	// Skip whitespace
@@ -197,7 +197,7 @@ exports.parseMacroInvocation = function(source,pos) {
 		type: "macrocall",
 		start: pos,
 		params: []
-	}
+	};
 	// Define our regexps
 	var reMacroName = /([^\s>"'=]+)/g;
 	// Skip whitespace
@@ -319,7 +319,7 @@ exports.parseTag = function(source,pos,options) {
 			attributes: {}
 		};
 	// Define our regexps
-	var reTagName = /([a-zA-Z\-\$]+)/g;
+	var reTagName = /([a-zA-Z0-9\-\$]+)/g;
 	// Skip whitespace
 	pos = this.skipWhiteSpace(source,pos);
 	// Look for a less than sign

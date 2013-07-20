@@ -29,14 +29,16 @@ Get the value of a text reference. Text references can have any of these forms:
 	<tiddlertitle>
 	<tiddlertitle>!!<fieldname>
 	!!<fieldname> - specifies a field of the current tiddlers
-	<tiddlertitle>##<field>
+	<tiddlertitle>##<index>
 */
 exports.getTextReference = function(textRef,defaultText,currTiddlerTitle) {
 	var tr = $tw.utils.parseTextReference(textRef),
 		title = tr.title || currTiddlerTitle;
 	if(tr.field) {
 		var tiddler = this.getTiddler(title);
-		if(tiddler && $tw.utils.hop(tiddler.fields,tr.field)) {
+		if(tr.field === "title") { // Special case so we can return the title of a non-existent tiddler
+			return title;
+		} else if(tiddler && $tw.utils.hop(tiddler.fields,tr.field)) {
 			return tiddler.getFieldString(tr.field);
 		} else {
 			return defaultText;

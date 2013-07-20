@@ -5,6 +5,12 @@ title: $:/core/ui/PageTemplate
 
 <$import browse="no" class="tw-drop-zone-fullscreen">
 
+<!-- The optional topbar -->
+{{$:/TopSideBar}}
+
+<!-- The optional leftsidebar -->
+{{$:/LeftSideBar}}
+
 <!-- The sidebar header -->
 <header class="sidebar-header">
 
@@ -22,7 +28,7 @@ title: $:/core/ui/PageTemplate
 <section class="story-river">
 
 <!-- The main story -->
-<$list filter="[list[$:/StoryList]]" history="$:/HistoryList" template="$:/core/ui/ViewTemplate" editTemplate="$:/core/ui/EditTemplate" listview="classic" itemClass="tw-tiddler-frame"/>
+<$list filter="[list[$:/StoryList]]" history="$:/HistoryList" template="$:/core/ui/ViewTemplate" editTemplate="$:/core/ui/EditTemplate" listview={{$:/view}} itemClass="tw-tiddler-frame"/>
 
 <!-- End of story river -->
 </section>

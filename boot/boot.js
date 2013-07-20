@@ -256,7 +256,10 @@ $tw.utils.parseStringArray = function(value) {
 		do {
 			match = memberRegExp.exec(value);
 			if(match) {
-				results.push(match[1] || match[2]);
+				var item = match[1] || match[2];
+				if(results.indexOf(item) === -1) {
+					results.push(item);
+				}
 			}
 		} while(match);
 		return results;
@@ -1100,6 +1103,9 @@ $tw.loadTiddlersFromPath = function(filepath,excludeRegExp) {
 					if(tidInfo.prefix) {
 						text = tidInfo.prefix + text;
 					}
+					if(tidInfo.suffix) {
+						text = text + tidInfo.suffix;
+					}
 					tidInfo.fields.text = text;
 					tiddlers.push({tiddlers: [tidInfo.fields]});
 				});
@@ -1238,6 +1244,17 @@ $tw.loadWikiTiddlers = function(wikiPath,parentPaths) {
 			}
 		}
 	}
+	// Load any themes within the wiki folder
+	var wikiThemesPath = path.resolve(wikiPath,$tw.config.wikiThemesSubDir);
+	if(fs.existsSync(wikiThemesPath)) {
+		var themeFolders = fs.readdirSync(wikiThemesPath);
+		for(t=0; t<themeFolders.length; t++) {
+			pluginFields = $tw.loadPluginFolder(path.resolve(wikiThemesPath,"./" + themeFolders[t]));
+			if(pluginFields) {
+				$tw.wiki.addTiddler(pluginFields);
+			}
+		}
+	}
 	return wikiInfo;
 };
 
@@ -1269,6 +1286,7 @@ $tw.boot.startup = function() {
 			themesPath: "../themes/",
 			wikiInfo: "./tiddlywiki.info",
 			wikiPluginsSubDir: "./plugins",
+			wikiThemesSubDir: "./themes",
 			wikiTiddlersSubDir: "./tiddlers",
 			jsModuleHeaderRegExpString: "^\\/\\*\\\\(?:\\r?\\n)((?:^[^\\r\\n]*(?:\\r?\\n))+?)(^\\\\\\*\\/$(?:\\r?\\n)?)",
 			fileExtensionInfo: {}, // Map file extension to {type:}
